@@ -354,7 +354,6 @@
         tempArray.push({ index: i, data: e.target.result });
         loadedCount++;
         if (loadedCount === files.length) {
-          // فرز الصور حسب ترتيب القائمة لضمان استقرار الإدخال الأولي
           tempArray.sort((a, b) => a.index - b.index);
           tempArray.forEach(item => pickedImages.push(item.data));
           updatePreviewUI();
@@ -385,7 +384,8 @@
   }
 
   const FIREBASE_URL = 'https://aravat-5a-default-rtdb.firebaseio.com/';
-  const IMGBB_KEY = '5807f7e8c7d21b6e771afc843be8577d';
+  // المفتاح الاحتياطي سيتم استخدامه إذا لم تكن قمت بتشغيل سكريبت بايثون أو كان هناك خطأ في جلبه
+  const FALLBACK_IMGBB_KEY = '1bef17ca9c6279d79489753ade7c01cf'; 
   const SUBJECTS = [
     { code: 'M3', name: 'الرياضيات (M3)', color: '#0D9488' },
     { code: 'M4', name: 'الرياضيات (M4)', color: '#0F766E' },
@@ -922,6 +922,10 @@
     btn.innerHTML = 'جاري الرفع والنشر... <span class="spinner"></span>';
     Android.showToast('جاري رفع المحتوى إلى السحاب... يرجى الانتظار');
     let uploadedUrls = [];
+    
+    // سحب المفتاح الديناميكي المرفوع عبر بايثون (أو استخدام الاحتياطي)
+    let activeImgbbKey = globalData.imgbb_key || FALLBACK_IMGBB_KEY;
+
     for (let base64Str of pickedImages) {
       if (base64Str.startsWith('http')) {
         uploadedUrls.push(base64Str);
@@ -931,7 +935,7 @@
         let rawBase64 = base64Str.split(',')[1];
         let formData = new FormData();
         formData.append('image', rawBase64);
-        let response = await fetch('https://api.imgbb.com/1/upload?key=' + IMGBB_KEY, {
+        let response = await fetch('https://api.imgbb.com/1/upload?key=' + activeImgbbKey, {
           method: 'POST',
           body: formData
         });
@@ -942,7 +946,7 @@
     if (pickedImages.length > 0 && uploadedUrls.length === 0) {
       btn.disabled = false;
       btn.innerHTML = originalText;
-      Android.showToast('فشل رفع الصور، تحقق من الإنترنت!');
+      Android.showToast('فشل رفع الصور، تحقق من الإنترنت أو صلاحية المفتاح!');
       return;
     }
     let editId = document.getElementById('editLessonId').value;
